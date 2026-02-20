@@ -10,6 +10,7 @@ import { runAdd, parseAddOptions, initTelemetry } from './add.ts';
 import { runFind } from './find.ts';
 import { runList } from './list.ts';
 import { removeCommand, parseRemoveOptions } from './remove.ts';
+import { runSync, parseSyncOptions } from './sync.ts';
 import { track } from './telemetry.ts';
 import { fetchSkillFolderHash, getGitHubToken } from './skill-lock.ts';
 
@@ -66,25 +67,30 @@ function showBanner(): void {
   console.log(`${DIM}The open agent skills ecosystem${RESET}`);
   console.log();
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills add ${DIM}<package>${RESET}   ${DIM}Install a skill${RESET}`
+    `  ${DIM}$${RESET} ${TEXT}npx skills add ${DIM}<package>${RESET}        ${DIM}Install a skill${RESET}`
   );
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills list${RESET}            ${DIM}List installed skills${RESET}`
+    `  ${DIM}$${RESET} ${TEXT}npx skills remove${RESET}               ${DIM}Remove installed skills${RESET}`
   );
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills find ${DIM}[query]${RESET}    ${DIM}Search for skills${RESET}`
+    `  ${DIM}$${RESET} ${TEXT}npx skills list${RESET}                 ${DIM}List installed skills${RESET}`
   );
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills check${RESET}           ${DIM}Check for updates${RESET}`
+    `  ${DIM}$${RESET} ${TEXT}npx skills find ${DIM}[query]${RESET}         ${DIM}Search for skills${RESET}`
+  );
+  console.log();
+  console.log(
+    `  ${DIM}$${RESET} ${TEXT}npx skills check${RESET}                ${DIM}Check for updates${RESET}`
   );
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills update${RESET}          ${DIM}Update all skills${RESET}`
+    `  ${DIM}$${RESET} ${TEXT}npx skills update${RESET}               ${DIM}Update all skills${RESET}`
+  );
+  console.log();
+  console.log(
+    `  ${DIM}$${RESET} ${TEXT}npx skills init ${DIM}[name]${RESET}          ${DIM}Create a new skill${RESET}`
   );
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills remove${RESET}          ${DIM}Remove installed skills${RESET}`
-  );
-  console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills init ${DIM}[name]${RESET}     ${DIM}Create a new skill${RESET}`
+    `  ${DIM}$${RESET} ${TEXT}npx skills experimental_sync${RESET}    ${DIM}Sync skills from node_modules${RESET}`
   );
   console.log();
   console.log(`${DIM}try:${RESET} npx skills add vercel-labs/agent-skills`);
@@ -97,16 +103,21 @@ function showHelp(): void {
   console.log(`
 ${BOLD}Usage:${RESET} skills <command> [options]
 
-${BOLD}Commands:${RESET}
-  add <package>     Add a skill package
-                    e.g. vercel-labs/agent-skills
-                         https://github.com/vercel-labs/agent-skills
-  remove [skills]   Remove installed skills
-  list, ls          List installed skills
-  find [query]      Search for skills interactively
-  init [name]       Initialize a skill (creates <name>/SKILL.md or ./SKILL.md)
-  check             Check for available skill updates
-  update            Update all skills to latest versions
+${BOLD}Manage Skills:${RESET}
+  add <package>        Add a skill package
+                       e.g. vercel-labs/agent-skills
+                            https://github.com/vercel-labs/agent-skills
+  remove [skills]      Remove installed skills
+  list, ls             List installed skills
+  find [query]         Search for skills interactively
+
+${BOLD}Updates:${RESET}
+  check                Check for available skill updates
+  update               Update all skills to latest versions
+
+${BOLD}Create & Sync:${RESET}
+  init [name]          Initialize a skill (creates <name>/SKILL.md or ./SKILL.md)
+  experimental_sync    Sync skills from node_modules into agent directories
 
 ${BOLD}Add Options:${RESET}
   -g, --global           Install skill globally (user-level) instead of project-level
@@ -124,6 +135,10 @@ ${BOLD}Remove Options:${RESET}
   -y, --yes              Skip confirmation prompts
   --all                  Shorthand for --skill '*' --agent '*' -y
   
+${BOLD}Experimental Sync Options:${RESET}
+  -a, --agent <agents>   Specify agents to install to (use '*' for all agents)
+  -y, --yes              Skip confirmation prompts
+
 ${BOLD}List Options:${RESET}
   -g, --global           List global skills (default: project)
   -a, --agent <agents>   Filter by specific agents
@@ -137,17 +152,19 @@ ${BOLD}Examples:${RESET}
   ${DIM}$${RESET} skills add vercel-labs/agent-skills -g
   ${DIM}$${RESET} skills add vercel-labs/agent-skills --agent claude-code cursor
   ${DIM}$${RESET} skills add vercel-labs/agent-skills --skill pr-review commit
-  ${DIM}$${RESET} skills remove                   ${DIM}# interactive remove${RESET}
-  ${DIM}$${RESET} skills remove web-design        ${DIM}# remove by name${RESET}
+  ${DIM}$${RESET} skills remove                        ${DIM}# interactive remove${RESET}
+  ${DIM}$${RESET} skills remove web-design             ${DIM}# remove by name${RESET}
   ${DIM}$${RESET} skills rm --global frontend-design
-  ${DIM}$${RESET} skills list                     ${DIM}# list all installed skills${RESET}
-  ${DIM}$${RESET} skills ls -g                    ${DIM}# list global skills only${RESET}
-  ${DIM}$${RESET} skills ls -a claude-code        ${DIM}# filter by agent${RESET}
-  ${DIM}$${RESET} skills find                     ${DIM}# interactive search${RESET}
-  ${DIM}$${RESET} skills find typescript          ${DIM}# search by keyword${RESET}
-  ${DIM}$${RESET} skills init my-skill
+  ${DIM}$${RESET} skills list                          ${DIM}# list project skills${RESET}
+  ${DIM}$${RESET} skills ls -g                         ${DIM}# list global skills${RESET}
+  ${DIM}$${RESET} skills ls -a claude-code             ${DIM}# filter by agent${RESET}
+  ${DIM}$${RESET} skills find                          ${DIM}# interactive search${RESET}
+  ${DIM}$${RESET} skills find typescript               ${DIM}# search by keyword${RESET}
   ${DIM}$${RESET} skills check
   ${DIM}$${RESET} skills update
+  ${DIM}$${RESET} skills init my-skill
+  ${DIM}$${RESET} skills experimental_sync              ${DIM}# sync from node_modules${RESET}
+  ${DIM}$${RESET} skills experimental_sync -y           ${DIM}# sync without prompts${RESET}
 
 Discover more skills at ${TEXT}https://skills.sh/${RESET}
 `);
@@ -595,6 +612,12 @@ async function main(): Promise<void> {
       const { skills, options: removeOptions } = parseRemoveOptions(restArgs);
       await removeCommand(skills, removeOptions);
       break;
+    case 'experimental_sync': {
+      showLogo();
+      const { options: syncOptions } = parseSyncOptions(restArgs);
+      await runSync(restArgs, syncOptions);
+      break;
+    }
     case 'list':
     case 'ls':
       await runList(restArgs);

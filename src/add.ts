@@ -57,6 +57,7 @@ import {
   getLastSelectedAgents,
   saveSelectedAgents,
 } from './skill-lock.ts';
+import { addSkillToLocalLock, computeSkillFolderHash } from './local-lock.ts';
 import type { Skill, AgentType, RemoteSkill } from './types.ts';
 import packageJson from '../package.json' with { type: 'json' };
 export function initTelemetry(version: string): void {
@@ -711,6 +712,26 @@ async function handleRemoteSkill(
     }
   }
 
+  // Add to local lock file for project-scoped installs
+  if (successful.length > 0 && !installGlobally) {
+    try {
+      const firstResult = successful[0]!;
+      const installDir = firstResult.canonicalPath || firstResult.path;
+      const computedHash = await computeSkillFolderHash(installDir);
+      await addSkillToLocalLock(
+        remoteSkill.installName,
+        {
+          source: remoteSkill.sourceIdentifier,
+          sourceType: remoteSkill.providerId,
+          computedHash,
+        },
+        cwd
+      );
+    } catch {
+      // Don't fail installation if lock file update fails
+    }
+  }
+
   if (successful.length > 0) {
     const resultLines: string[] = [];
     const firstResult = successful[0]!;
@@ -1124,6 +1145,33 @@ async function handleWellKnownSkills(
             sourceUrl: skill.sourceUrl,
             skillFolderHash: '', // Well-known skills don't have a folder hash
           });
+        } catch {
+          // Don't fail installation if lock file update fails
+        }
+      }
+    }
+  }
+
+  // Add to local lock file for project-scoped installs
+  if (successful.length > 0 && !installGlobally) {
+    const successfulSkillNames = new Set(successful.map((r) => r.skill));
+    for (const skill of selectedSkills) {
+      if (successfulSkillNames.has(skill.installName)) {
+        try {
+          const matchingResult = successful.find((r) => r.skill === skill.installName);
+          const installDir = matchingResult?.canonicalPath || matchingResult?.path;
+          if (installDir) {
+            const computedHash = await computeSkillFolderHash(installDir);
+            await addSkillToLocalLock(
+              skill.installName,
+              {
+                source: sourceIdentifier,
+                sourceType: 'well-known',
+                computedHash,
+              },
+              cwd
+            );
+          }
         } catch {
           // Don't fail installation if lock file update fails
         }
@@ -2006,6 +2054,30 @@ export async function runAdd(args: string[], options: AddOptions = {}): Promise<
               skillPath: skillPathValue,
               skillFolderHash,
             });
+          } catch {
+            // Don't fail installation if lock file update fails
+          }
+        }
+      }
+    }
+
+    // Add to local lock file for project-scoped installs
+    if (successful.length > 0 && !installGlobally) {
+      const successfulSkillNames = new Set(successful.map((r) => r.skill));
+      for (const skill of selectedSkills) {
+        const skillDisplayName = getSkillDisplayName(skill);
+        if (successfulSkillNames.has(skillDisplayName)) {
+          try {
+            const computedHash = await computeSkillFolderHash(skill.path);
+            await addSkillToLocalLock(
+              skill.name,
+              {
+                source: normalizedSource || parsed.url,
+                sourceType: parsed.type,
+                computedHash,
+              },
+              cwd
+            );
           } catch {
             // Don't fail installation if lock file update fails
           }
