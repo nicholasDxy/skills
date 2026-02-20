@@ -14,7 +14,8 @@ import {
 describe('local-lock', () => {
   describe('getLocalLockPath', () => {
     it('returns skills-lock.json in given directory', () => {
-      expect(getLocalLockPath('/some/project')).toBe('/some/project/skills-lock.json');
+      const result = getLocalLockPath('/some/project');
+      expect(result).toBe(join('/some/project', 'skills-lock.json'));
     });
 
     it('uses cwd when no directory given', () => {
