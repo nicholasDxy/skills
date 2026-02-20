@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { readLocalLock, type LocalSkillLockEntry } from './local-lock.ts';
+import { readLocalLock } from './local-lock.ts';
 import { runAdd, parseAddOptions } from './add.ts';
 import { runSync, parseSyncOptions } from './sync.ts';
 
@@ -15,8 +15,10 @@ export async function runInstallFromLock(args: string[]): Promise<void> {
   const skillEntries = Object.entries(lock.skills);
 
   if (skillEntries.length === 0) {
-    p.log.warn('No skills found in skills-lock.json');
-    p.log.info(`Run ${pc.cyan('npx skills add <package>')} to add skills`);
+    p.log.warn('No project skills found in skills-lock.json');
+    p.log.info(
+      `Add project-level skills with ${pc.cyan('npx skills add <package>')} (without ${pc.cyan('-g')})`
+    );
     return;
   }
 
@@ -44,7 +46,6 @@ export async function runInstallFromLock(args: string[]): Promise<void> {
     }
   }
 
-  const totalSources = bySource.size + (nodeModuleSkills.length > 0 ? 1 : 0);
   p.log.info(
     `Restoring ${pc.cyan(String(skillEntries.length))} skill${skillEntries.length !== 1 ? 's' : ''} from skills-lock.json`
   );

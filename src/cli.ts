@@ -68,9 +68,6 @@ function showBanner(): void {
   console.log(`${DIM}The open agent skills ecosystem${RESET}`);
   console.log();
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills install${RESET}              ${DIM}Install skills from skills-lock.json${RESET}`
-  );
-  console.log(
     `  ${DIM}$${RESET} ${TEXT}npx skills add ${DIM}<package>${RESET}        ${DIM}Add a new skill${RESET}`
   );
   console.log(
@@ -91,6 +88,9 @@ function showBanner(): void {
   );
   console.log();
   console.log(
+    `  ${DIM}$${RESET} ${TEXT}npx skills experimental_install${RESET} ${DIM}Restore from skills-lock.json${RESET}`
+  );
+  console.log(
     `  ${DIM}$${RESET} ${TEXT}npx skills init ${DIM}[name]${RESET}          ${DIM}Create a new skill${RESET}`
   );
   console.log(
@@ -108,7 +108,6 @@ function showHelp(): void {
 ${BOLD}Usage:${RESET} skills <command> [options]
 
 ${BOLD}Manage Skills:${RESET}
-  install              Install skills from skills-lock.json (alias: i)
   add <package>        Add a skill package (alias: a)
                        e.g. vercel-labs/agent-skills
                             https://github.com/vercel-labs/agent-skills
@@ -120,7 +119,8 @@ ${BOLD}Updates:${RESET}
   check                Check for available skill updates
   update               Update all skills to latest versions
 
-${BOLD}Create & Sync:${RESET}
+${BOLD}Project:${RESET}
+  experimental_install Restore skills from skills-lock.json
   init [name]          Initialize a skill (creates <name>/SKILL.md or ./SKILL.md)
   experimental_sync    Sync skills from node_modules into agent directories
 
@@ -153,7 +153,6 @@ ${BOLD}Options:${RESET}
   --version, -v     Show version number
 
 ${BOLD}Examples:${RESET}
-  ${DIM}$${RESET} skills install                         ${DIM}# restore from skills-lock.json${RESET}
   ${DIM}$${RESET} skills add vercel-labs/agent-skills
   ${DIM}$${RESET} skills add vercel-labs/agent-skills -g
   ${DIM}$${RESET} skills add vercel-labs/agent-skills --agent claude-code cursor
@@ -168,6 +167,7 @@ ${BOLD}Examples:${RESET}
   ${DIM}$${RESET} skills find typescript               ${DIM}# search by keyword${RESET}
   ${DIM}$${RESET} skills check
   ${DIM}$${RESET} skills update
+  ${DIM}$${RESET} skills experimental_install            ${DIM}# restore from skills-lock.json${RESET}
   ${DIM}$${RESET} skills init my-skill
   ${DIM}$${RESET} skills experimental_sync              ${DIM}# sync from node_modules${RESET}
   ${DIM}$${RESET} skills experimental_sync -y           ${DIM}# sync without prompts${RESET}
@@ -598,18 +598,13 @@ async function main(): Promise<void> {
       console.log();
       runInit(restArgs);
       break;
-    case 'i':
-    case 'install': {
+    case 'experimental_install': {
       showLogo();
-      const { source, options } = parseAddOptions(restArgs);
-      if (source.length === 0) {
-        // No source provided: restore from skills-lock.json
-        await runInstallFromLock(restArgs);
-      } else {
-        await runAdd(source, options);
-      }
+      await runInstallFromLock(restArgs);
       break;
     }
+    case 'i':
+    case 'install':
     case 'a':
     case 'add': {
       showLogo();
