@@ -19,7 +19,7 @@ This file provides guidance to AI coding agents working on the `skills` CLI code
 | `skills update`               | Update all skills to latest versions                |
 | `skills init [name]`          | Create a new SKILL.md template                      |
 
-Aliases: `skills a` works for `add`. `skills i`, `skills install` (no args) restore from `skills-lock.json`. `skills ls` works for `list`. `skills experimental_sync` crawls `node_modules` for skills.
+Aliases: `skills a` works for `add`. `skills i`, `skills install` (no args) restore from `skills-lock.json`. `skills ls` works for `list`. `skills experimental_install` restores from `skills-lock.json`. `skills experimental_sync` crawls `node_modules` for skills.
 
 ## Architecture
 

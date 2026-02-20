@@ -141,20 +141,21 @@ description: Test
     expect(result.exitCode).toBe(1);
   });
 
-  it('should support add command aliases (a)', () => {
-    // Test that 'a' alias works same as 'add'
+  it('should support add command aliases (a, i, install)', () => {
+    // Test that aliases work (just check they show missing source error)
     const resultA = runCli(['a'], testDir);
-    expect(resultA.stdout).toContain('Missing required argument: source');
-  });
-
-  it('should restore from lock file when install/i called with no args', () => {
-    // 'install' and 'i' with no args read skills-lock.json
     const resultI = runCli(['i'], testDir);
     const resultInstall = runCli(['install'], testDir);
 
-    // No lock file exists, so both should say no skills found
-    expect(resultI.stdout).toContain('No skills found in skills-lock.json');
-    expect(resultInstall.stdout).toContain('No skills found in skills-lock.json');
+    // All should show the same "missing source" error
+    expect(resultA.stdout).toContain('Missing required argument: source');
+    expect(resultI.stdout).toContain('Missing required argument: source');
+    expect(resultInstall.stdout).toContain('Missing required argument: source');
+  });
+
+  it('should restore from lock file with experimental_install', () => {
+    const result = runCli(['experimental_install'], testDir);
+    expect(result.stdout).toContain('No project skills found in skills-lock.json');
   });
 
   describe('internal skills', () => {
