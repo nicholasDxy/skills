@@ -8,6 +8,7 @@ import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import { runAdd, parseAddOptions, initTelemetry } from './add.ts';
 import { runFind } from './find.ts';
+import { runInstallFromLock } from './install.ts';
 import { runList } from './list.ts';
 import { removeCommand, parseRemoveOptions } from './remove.ts';
 import { runSync, parseSyncOptions } from './sync.ts';
@@ -67,7 +68,10 @@ function showBanner(): void {
   console.log(`${DIM}The open agent skills ecosystem${RESET}`);
   console.log();
   console.log(
-    `  ${DIM}$${RESET} ${TEXT}npx skills add ${DIM}<package>${RESET}        ${DIM}Install a skill${RESET}`
+    `  ${DIM}$${RESET} ${TEXT}npx skills install${RESET}              ${DIM}Install skills from skills-lock.json${RESET}`
+  );
+  console.log(
+    `  ${DIM}$${RESET} ${TEXT}npx skills add ${DIM}<package>${RESET}        ${DIM}Add a new skill${RESET}`
   );
   console.log(
     `  ${DIM}$${RESET} ${TEXT}npx skills remove${RESET}               ${DIM}Remove installed skills${RESET}`
@@ -104,7 +108,8 @@ function showHelp(): void {
 ${BOLD}Usage:${RESET} skills <command> [options]
 
 ${BOLD}Manage Skills:${RESET}
-  add <package>        Add a skill package
+  install              Install skills from skills-lock.json (alias: i)
+  add <package>        Add a skill package (alias: a)
                        e.g. vercel-labs/agent-skills
                             https://github.com/vercel-labs/agent-skills
   remove [skills]      Remove installed skills
@@ -148,6 +153,7 @@ ${BOLD}Options:${RESET}
   --version, -v     Show version number
 
 ${BOLD}Examples:${RESET}
+  ${DIM}$${RESET} skills install                         ${DIM}# restore from skills-lock.json${RESET}
   ${DIM}$${RESET} skills add vercel-labs/agent-skills
   ${DIM}$${RESET} skills add vercel-labs/agent-skills -g
   ${DIM}$${RESET} skills add vercel-labs/agent-skills --agent claude-code cursor
@@ -593,12 +599,22 @@ async function main(): Promise<void> {
       runInit(restArgs);
       break;
     case 'i':
-    case 'install':
+    case 'install': {
+      showLogo();
+      const { source, options } = parseAddOptions(restArgs);
+      if (source.length === 0) {
+        // No source provided: restore from skills-lock.json
+        await runInstallFromLock(restArgs);
+      } else {
+        await runAdd(source, options);
+      }
+      break;
+    }
     case 'a':
     case 'add': {
       showLogo();
-      const { source, options } = parseAddOptions(restArgs);
-      await runAdd(source, options);
+      const { source: addSource, options: addOpts } = parseAddOptions(restArgs);
+      await runAdd(addSource, addOpts);
       break;
     }
     case 'remove':
